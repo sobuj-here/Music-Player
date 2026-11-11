@@ -53,44 +53,49 @@ From dynamic folder exploration and fast local search to an integrated 5-band gr
 
 ## ✨ Features
 
-### 🎧 Long-Session Background Playback
-- **MediaSessionService Architecture**: Playback runs in an independent foreground service decoupled from the Activity lifecycle. Music continues effortlessly whether the phone is locked, the display is turned off, or you switch between memory-heavy applications.
-- **Extended Listening**: Configured with `C.WAKE_MODE_LOCAL` to keep the audio subsystem active for continuous multi-hour sessions (tested for 48h+ playback without interruption).
-- **Smart Audio Focus**: Automatically pauses for incoming phone calls and resumes once finished.
-- **Audio Becoming Noisy Guard**: Instant auto-pause when wired earphones are unplugged or Bluetooth headphones disconnect, preventing unexpected audio playback over loudspeakers.
-- **Lock Screen & Headset Controls**: Full notification media controls, lock screen scrubber, and standard Bluetooth hardware button integration.
+### 🎧 Persistent Playback & Background Operation
+- **MediaSessionService Architecture**: Audio playback runs inside an independent foreground service decoupled from the Activity lifecycle. Music continues effortlessly whether the screen is locked, display is turned off, or you switch between heavy applications.
+- **Exact Position Restoration**: Automatically saves playback progress, track ID, complete queue, queue index, repeat mode, shuffle state, and playback speed to local DataStore. When reopening the application, playback resumes from the exact saved millisecond without starting over.
+- **Smart System Back Navigation**: Implements an explicit navigation stack (`Navigator` + `BackHandler`). Pressing the system Back button on sub-screens (Settings, Equalizer, Album, Artist, Folder, Playlist, and Now Playing) returns to the previous screen. Pressing Back on the main library smoothly sends the application to the background (`moveTaskToBack`) without stopping music.
+- **Extended Listening Sessions**: Engineered for continuous multi-hour and multi-day playback sessions with battery-conscious audio wake locks.
+- **Smart Audio Focus**: Automatically pauses for incoming calls and resumes cleanly when finished.
+- **Audio Becoming Noisy Protection**: Instantly auto-pauses when headphones are unplugged or Bluetooth disconnects, preventing unexpected playback through loudspeakers.
 
-### 📂 Comprehensive Music Library
-- **MediaStore Integration**: Automatically queries local storage with defensive handling for missing metadata and tags.
-- **8 Dedicated Library Tabs**:
-  - **Songs**: Chronological or alphabetical list of every track.
-  - **Albums**: Grouped collections with embedded album art.
-  - **Artists**: Discographies organized by performing artist.
-  - **Folders**: Direct directory-level browsing across storage partitions.
-  - **Recently Added**: Newly imported or downloaded tracks.
-  - **Recently Played**: Real-time listening history tracked locally.
-  - **Favorites**: One-tap favorited songs stored in Room database.
-  - **Playlists**: Custom user-created playlists with full editing support.
-- **Instant Search**: Real-time multi-field search across titles, artists, and album names.
-- **Flexible Sorting**: Sort any view by title, artist, album, or date added in ascending or descending order.
+### 📂 Comprehensive Music Library & Collection Views
+- **MediaStore Discovery**: Fast asynchronous scanning with defensive null-safety for incomplete or missing audio tags.
+- **8 Library Tabs**:
+  - **Songs**: Complete list of every local track with sorting and quick action menus.
+  - **Albums**: Grid of album collections with embedded artwork and release years.
+  - **Artists**: Discographies organized by artist with album and track counts.
+  - **Folders**: Direct directory-level storage browsing.
+  - **Recently Added**: Chronologically ordered by newest additions.
+  - **Recently Played**: Real-time local listening history.
+  - **Favorites**: One-tap favorited tracks persisted in Room SQLite.
+  - **Playlists**: Custom playlists with creation, reordering, and editing tools.
+- **Dedicated Collection Detail Screens**: Tapping any album, artist, or folder opens an immersive detail view with full track listings, total duration counters, "Play All", and "Shuffle" buttons.
+- **Instant Search & Sort**: Real-time filtering across titles, artists, and albums, plus multi-criteria sorting.
 
-### 🎚 Hardware Audio Tuning
-- **5-Band Graphic Equalizer**: Directly interfaces with Android's audio effects pipeline.
-- **Preset Tunings**: Switch between 9 presets including *Rock, Classical, Dance, Flat, Heavy Metal, Hip Hop, Jazz, Pop,* and *Normal*.
-- **Bass Boost & Virtualizer**: Granular sliders to boost low-end frequencies and expand spatial 3D surround sound.
+### 🎚 Hardware Audio Equalizer
+- **Active Audio Session Attachment**: Directly connected to ExoPlayer's active audio session ID (`audioSessionId > 0`) via service analytics listeners for reliable hardware effect initialization.
+- **Standard Presets**: Includes *Normal, Rock, Pop, Jazz, Classical, Bass Boost, Vocal,* and *Custom* presets.
+- **5-Band Sliders & Effects**: Granular frequency sliders, hardware bass boost, and spatial virtualizer.
+- **Honest Diagnostics**: Displays clear, real-time hardware status messages when effects are active or unsupported on specific device hardware.
+
+### ⚙️ Comprehensive Settings Suite (8 Sections)
+- **Appearance**: Dark theme and true pitch-black AMOLED mode toggles.
+- **Playback Control**: Toggle position memory, configurable crossfade (0–10s), and gapless playback.
+- **Background Playback**: Disconnect auto-pause toggle and device-specific battery optimization guide.
+- **Library Management**: Automatic scanner trigger and short audio exclusion filter (< 30 seconds) to hide ringtones and voice notes.
+- **Notification Styling**: System media notification style configuration.
+- **Storage & Playlist Backup**: Full JSON export and import for user playlists (`playlists_backup_*.json`) and Coil album artwork cache clearing.
+- **Privacy Assurance**: 100% offline verification confirming zero internet access, zero trackers, and zero telemetry.
+- **About**: Version information, package identifier, and open-source license.
 
 ### ⏱ Smart Sleep Timer
-- Fall asleep to your favorite music without running down the device battery overnight.
-- Choose between preset countdowns (15m, 30m, 45m, 60m), custom minute values, or let the player automatically turn off after the **current track finishes**.
-
-### 🎨 Material 3 Customization
-- Seamless **Dark** and **Light** themes.
-- Five distinct accent palettes: *Royal Purple, Ocean Blue, Electric Teal, Sunset Orange,* and *Emerald Green*.
-- Persistent bottom mini-player for smooth, single-tap access back to the full-screen player.
+- Presets for 15, 30, 45, and 60 minutes, custom minute input, or automatic shut-off when the current song completes.
 
 ### 🔒 100% Offline & Private
-- Strictly zero network dependencies: no ads, no trackers, no cloud sync, and zero AI telemetry.
-- All playlists, playback history, and user settings stay entirely on your device.
+- Strictly zero network permissions: no ads, no trackers, no accounts, and zero cloud telemetry. All database records and settings stay entirely on device.
 
 ---
 
@@ -130,11 +135,14 @@ com.musicplayer.app
 │   ├── mediastore     # Async MediaStore scanner with robust column null-safety
 │   └── repository     # Single sources of truth: MusicRepository & PreferencesRepository
 ├── model              # Immutable domain models (Song, Album, Artist, Playlist, PlaybackState)
-├── player             # PlayerConnection (MediaController bridge), Equalizer, SleepTimer
-├── service            # MusicService (MediaSessionService, AudioFocus, WakeLock)
+├── navigation         # Navigation stack (Navigator & Screen hierarchy with BackHandler)
+├── player             # PlayerConnection (MediaController bridge), EqualizerController, SleepTimer
+├── service            # MusicService (MediaSessionService, AudioFocus, AudioSessionId hooks)
+├── settings           # BackupManager (JSON playlist export & import)
 ├── ui
 │   ├── components     # Reusable Compose widgets (MiniPlayer, SongItem, AlbumCard, SearchBar)
 │   ├── screens        # Full screens (MainScreen, NowPlayingScreen, EqualizerScreen, SettingsScreen)
+│   │   └── detail     # Collection detail views (AlbumDetailScreen, ArtistDetailScreen, FolderDetailScreen)
 │   └── theme          # Dynamic Material 3 palettes, Typography, and System Bar styling
 ├── util               # Modern permission utilities (API 33+ READ_MEDIA_AUDIO), time formatters
 └── viewmodel          # ViewModels managing UI state flows (Main, Playlist, Equalizer, Settings)
