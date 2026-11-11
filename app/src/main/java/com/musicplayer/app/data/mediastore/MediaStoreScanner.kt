@@ -49,28 +49,29 @@ class MediaStoreScanner(private val context: Context) {
             )
 
             cursor?.use {
-                val idCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
-                val titleCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
-                val artistCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
-                val albumCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
-                val albumIdCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
-                val durationCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
-                val dataCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
-                val dateAddedCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED)
-                val sizeCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
+                val idCol = it.getColumnIndex(MediaStore.Audio.Media._ID)
+                val titleCol = it.getColumnIndex(MediaStore.Audio.Media.TITLE)
+                val artistCol = it.getColumnIndex(MediaStore.Audio.Media.ARTIST)
+                val albumCol = it.getColumnIndex(MediaStore.Audio.Media.ALBUM)
+                val albumIdCol = it.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID)
+                val durationCol = it.getColumnIndex(MediaStore.Audio.Media.DURATION)
+                val dataCol = it.getColumnIndex(MediaStore.Audio.Media.DATA)
+                val dateAddedCol = it.getColumnIndex(MediaStore.Audio.Media.DATE_ADDED)
+                val sizeCol = it.getColumnIndex(MediaStore.Audio.Media.SIZE)
                 val trackCol = it.getColumnIndex(MediaStore.Audio.Media.TRACK)
                 val yearCol = it.getColumnIndex(MediaStore.Audio.Media.YEAR)
 
                 while (it.moveToNext()) {
+                    if (idCol < 0) continue
                     val id = it.getLong(idCol)
-                    val rawTitle = it.getString(titleCol)
-                    val rawArtist = it.getString(artistCol)
-                    val rawAlbum = it.getString(albumCol)
-                    val albumId = it.getLong(albumIdCol)
-                    val duration = it.getLong(durationCol)
-                    val filePath = it.getString(dataCol) ?: ""
-                    val dateAdded = it.getLong(dateAddedCol)
-                    val size = it.getLong(sizeCol)
+                    val rawTitle = if (titleCol >= 0) it.getString(titleCol) else null
+                    val rawArtist = if (artistCol >= 0) it.getString(artistCol) else null
+                    val rawAlbum = if (albumCol >= 0) it.getString(albumCol) else null
+                    val albumId = if (albumIdCol >= 0) it.getLong(albumIdCol) else 0L
+                    val duration = if (durationCol >= 0) it.getLong(durationCol) else 0L
+                    val filePath = if (dataCol >= 0) (it.getString(dataCol) ?: "") else ""
+                    val dateAdded = if (dateAddedCol >= 0) it.getLong(dateAddedCol) else 0L
+                    val size = if (sizeCol >= 0) it.getLong(sizeCol) else 0L
                     val track = if (trackCol >= 0) it.getInt(trackCol) else 0
                     val year = if (yearCol >= 0) it.getInt(yearCol) else 0
 

@@ -36,6 +36,7 @@ class EqualizerController {
     private val _state = MutableStateFlow(EqualizerState())
     val state = _state.asStateFlow()
 
+    @Suppress("DEPRECATION")
     fun attachAudioSession(audioSessionId: Int) {
         if (audioSessionId < 0 || (audioSessionId == currentAudioSessionId && equalizer != null)) return
         release()
@@ -150,6 +151,7 @@ class EqualizerController {
         }
     }
 
+    @Suppress("DEPRECATION")
     fun setBassBoost(strength: Short) {
         try {
             bassBoost?.setStrength(strength)
@@ -159,6 +161,7 @@ class EqualizerController {
         }
     }
 
+    @Suppress("DEPRECATION")
     fun setVirtualizer(strength: Short) {
         try {
             virtualizer?.setStrength(strength)

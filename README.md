@@ -1,165 +1,133 @@
 # Music Player
 
-A lightweight, professional, reliable native offline Android music player built with **Kotlin** and **Jetpack Compose**.
+<div align="center">
+  <img src="docs/screenshots/00_hero_banner.png" alt="Music Player Banner" width="100%" />
+</div>
+
+<p align="center">
+  <b>A lightweight, high-performance, offline native Android music player engineered for seamless, uninterrupted background playback.</b>
+</p>
+
+<p align="center">
+  <a href="releases/MusicPlayer-v1.0.0-release.apk"><img src="https://img.shields.io/badge/Download-Release%20APK%20(v1.0.0)-00E5FF?style=for-the-badge&logo=android&logoColor=black" alt="Download APK" /></a>
+  <img src="https://img.shields.io/badge/Kotlin-2.0.0-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin" />
+  <img src="https://img.shields.io/badge/Compose-Material%203-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose" />
+  <img src="https://img.shields.io/badge/ExoPlayer-Media3%201.4.1-FF6F00?style=for-the-badge&logo=google&logoColor=white" alt="Media3" />
+  <img src="https://img.shields.io/badge/Storage-100%25%20Offline-success?style=for-the-badge&logo=sqlite&logoColor=white" alt="Offline" />
+</p>
 
 ---
 
-## 1. Overview & Architecture
+## 📱 Visual Showcase
 
-**Music Player** is designed from the ground up for high-fidelity offline audio playback, rock-solid background playback stability, and modern user experience following official Android architecture guidelines.
+<div align="center">
+  <table>
+    <tr>
+      <th width="33%">Now Playing</th>
+      <th width="33%">Music Library</th>
+      <th width="33%">5-Band Equalizer</th>
+    </tr>
+    <tr>
+      <td><img src="docs/screenshots/01_now_playing.png" alt="Now Playing Screen" width="100%" /></td>
+      <td><img src="docs/screenshots/02_library.png" alt="Music Library" width="100%" /></td>
+      <td><img src="docs/screenshots/03_equalizer.png" alt="Equalizer & Sound Effects" width="100%" /></td>
+    </tr>
+    <tr>
+      <td align="center"><i>Album Art, Scrubber & Controls</i></td>
+      <td align="center"><i>8-Tab Organization & Search</i></td>
+      <td align="center"><i>Frequency Bands & Bass Boost</i></td>
+    </tr>
+  </table>
+</div>
 
-- **No AI Models or Cloud Services**: 100% conventional, deterministic application code. Zero LLMs, machine learning models, cloud APIs, tracking, or network telemetry.
-- **Offline-First & Privacy Preserving**: Operates without internet connectivity. All library indexing, playlists, favorites, and settings are stored locally.
-- **Strict Separation of Concerns (MVVM)**: Audio playback is decoupled from Activity lifecycles, ensuring uninterrupted playback even when the UI is destroyed or the device is locked.
+---
+
+## ⚡ Highlights & Key Capabilities
+
+- **Uninterrupted Background Playback (48h+ Capable)**: Built on AndroidX `MediaSessionService` and ExoPlayer with `C.WAKE_MODE_LOCAL`. Playback stays smooth whether the screen is locked, the user switches apps, or the Activity is destroyed by the system.
+- **Complete Local Media Scanner**: Scans device storage using the Android `MediaStore` content provider. Categorizes tracks into **All Songs**, **Albums**, **Artists**, **Folders**, **Recently Added**, **Recently Played**, **Favorites**, and **Playlists**.
+- **Hardware-Accelerated Equalizer**: 5-band frequency equalizer with 9 genre-tuned presets (*Rock, Classical, Dance, Flat, Heavy Metal, Hip Hop, Jazz, Pop, Normal*), Bass Boost, and 3D Virtualizer audio spatialization.
+- **Smart Audio Interruption Handling**: Pauses on incoming telephone calls and gracefully resumes. Automatically halts audio on headphone disconnect or Bluetooth uncoupling (`setHandleAudioBecomingNoisy(true)`).
+- **Sleep Timer Utility**: Countdown timer presets (15m, 30m, 45m, 60m), custom minute inputs, or automatic stop when the currently playing track finishes.
+- **Persistent Playback Queue & Playlists**: Add next, reorder tracks via dragging, clear queues, and manage custom playlists backed by an offline Room SQLite database.
+- **Material 3 Design System**: Adaptive Dark and Light themes accompanied by 5 selectable accent color palettes (*Royal Purple, Ocean Blue, Electric Teal, Sunset Orange, Emerald Green*).
+- **100% Offline & Private**: Zero cloud dependencies, zero analytics SDKs, zero background telemetry, and zero artificial intelligence models. Audio files and listening history never leave your device.
+
+---
+
+## 🏗 Architecture & Engineering
+
+The application follows the recommended Android Architecture guidelines with separation of concerns:
 
 ```
-com.musicplayer.app/
-├── MusicPlayerApplication.kt
-├── data/
-│   ├── local/
-│   │   ├── dao/ (PlaylistDao, FavoriteDao, HistoryDao)
-│   │   ├── entity/ (PlaylistEntity, PlaylistSongCrossRef, FavoriteSongEntity, RecentlyPlayedEntity)
-│   │   └── MusicDatabase.kt (Room Database)
-│   ├── mediastore/
-│   │   └── MediaStoreScanner.kt (Querying MediaStore audio files)
-│   └── repository/
-│       ├── MusicRepository.kt
-│       └── PreferencesRepository.kt (DataStore Preferences)
-├── model/
-│   ├── Song.kt
-│   ├── Album.kt
-│   ├── Artist.kt
-│   ├── Folder.kt
-│   ├── Playlist.kt
-│   ├── PlaybackState.kt
-│   ├── RepeatMode.kt
-│   └── SortOrder.kt
-├── player/
-│   ├── PlayerConnection.kt (MediaController connection & queue state)
-│   ├── EqualizerController.kt (Hardware audiofx wrapper)
-│   └── SleepTimerManager.kt (Countdown & end-of-track sleep timer)
-├── service/
-│   └── MusicService.kt (MediaSessionService & background notification)
-├── ui/
-│   ├── MainActivity.kt
-│   ├── components/ (MiniPlayer, SongItem, AlbumCard, ArtistCard, FolderItem, SearchBar, SortDialog, PermissionView, EmptyStateView)
-│   ├── screens/
-│   │   ├── MainScreen.kt
-│   │   ├── NowPlayingScreen.kt
-│   │   ├── QueueBottomSheet.kt
-│   │   ├── PlaylistDetailScreen.kt
-│   │   ├── EqualizerScreen.kt
-│   │   ├── SleepTimerDialog.kt
-│   │   ├── SongDetailsDialog.kt
-│   │   ├── SettingsScreen.kt
-│   │   └── tabs/ (SongsTab, AlbumsTab, ArtistsTab, FoldersTab, PlaylistsTab, FavoritesTab, RecentlyAddedTab, RecentlyPlayedTab)
-│   └── theme/ (Color, Theme, Type)
-└── util/
-    ├── PermissionUtil.kt
-    ├── TimeFormatter.kt
-    └── FileUtil.kt
+com.musicplayer.app
+├── data
+│   ├── local          # Room Database, DAOs (Playlists, Favorites, Play History)
+│   ├── mediastore     # Async MediaStore queries, metadata extraction, folder grouping
+│   └── repository     # Single source of truth: MusicRepository & PreferencesRepository
+├── model              # Immutable domain entities (Song, Album, Artist, Playlist, PlaybackState)
+├── player             # PlayerConnection (IPC Controller bridge), Equalizer, SleepTimer
+├── service            # MusicService (MediaSessionService, AudioFocus, Notification channel)
+├── ui
+│   ├── components     # Reusable Compose widgets (MiniPlayer, SongItem, AlbumCard, SearchBar)
+│   ├── screens        # Full-screen Composable views (MainScreen, NowPlaying, Equalizer, Settings)
+│   └── theme          # Dynamic Material 3 typography, color palettes, and themes
+├── util               # Modern permission handling (API 33+ READ_MEDIA_AUDIO), time & file formatters
+└── viewmodel          # ViewModels managing state flows (Main, Playlist, Equalizer, Settings)
 ```
 
 ---
 
-## 2. Technology Stack
+## 📦 Quick Download & Installation
 
-- **Language**: Kotlin 2.0+
-- **UI Toolkit**: Jetpack Compose with Material Design 3
-- **Architecture**: MVVM with Kotlin Coroutines & StateFlow
-- **Playback Engine**: AndroidX Media3 ExoPlayer (`1.4.1`)
-- **Background Playback**: `MediaSessionService`
-- **Local Database**: Room (`2.6.1`)
-- **Settings & State Storage**: Jetpack DataStore Preferences (`1.1.1`)
-- **Audio Discovery**: Android `MediaStore`
-- **Image Loading**: Coil Compose (`2.7.0`)
-- **Build System**: Gradle 9.6 with Android Gradle Plugin (AGP)
+You can download the pre-compiled, signed APK directly:
+
+📥 **[Download MusicPlayer-v1.0.0-release.apk](releases/MusicPlayer-v1.0.0-release.apk)** (15 MB)
+
+### Installation via ADB
+```bash
+adb install -r releases/MusicPlayer-v1.0.0-release.apk
+```
 
 ---
 
-## 3. Key Features
-
-### Complete Music Library Management
-- **All Songs**: Complete list of indexed audio files with title, artist, album, duration, and artwork.
-- **Albums**: Visual grid of albums with song counts and artwork.
-- **Artists**: Catalog of artists with album and track breakdowns.
-- **Folders**: Physical directory browsing of music storage locations.
-- **Recently Added**: Newest tracks added to device storage.
-- **Recently Played**: Local listening history with one-tap clear option.
-- **Favorites**: Heart toggle on any song with dedicated favorites tab.
-- **User Playlists**: Create, rename, edit, and delete custom playlists persisted across app restarts.
-- **Search & Sort**: Real-time filtering by keyword and sorting by Title (A-Z, Z-A), Artist (A-Z, Z-A), Album, Date Added, and Duration.
-
-### Robust Background Playback (48-Hour Continuous Listening)
-- **Independent Playback Service**: Managed by `MusicService` extending `MediaSessionService`. Does not depend on `MainActivity` staying alive.
-- **Audio Focus**: Automatically ducks or pauses when phone calls or navigation directions occur, and resumes upon focus regain.
-- **Becoming Noisy Handling**: Automatically pauses when headphones are unplugged or Bluetooth disconnects.
-- **Media Controls**: Integrated system notification controls and lock screen playback actions.
-- **Wake Lock Protection**: Uses `C.WAKE_MODE_LOCAL` to keep the CPU awake during active playback without excessive battery drain.
-- **State Restoration**: Last played track and seek position are saved to local DataStore and restored across application restarts.
-
-### Modern Now Playing Screen
-- Immersive rounded album artwork display.
-- Interactive progress seek bar with elapsed and remaining time display.
-- Prominent Play/Pause, Skip Next, Skip Previous buttons.
-- Shuffle mode toggle.
-- Repeat mode cycling (Off, Repeat All, Repeat One).
-- Playback speed adjustment (0.5x, 0.75x, 1.0x, 1.25x, 1.5x, 2.0x).
-- Live interactive Queue Bottom Sheet (view, jump, reorder, remove, clear).
-- Favorite heart toggle.
-
-### Audio Enhancements & Utilities
-- **5-Band Equalizer**: Center frequencies (60Hz, 230Hz, 910Hz, 3.6kHz, 14kHz) with -15 dB to +15 dB gain adjustment.
-- **Hardware Presets**: Normal, Rock, Pop, Jazz, Classical, Heavy Metal, etc.
-- **Bass Boost & Virtualizer (3D Audio)**: Slider controls for devices with hardware effect engines.
-- **Sleep Timer**: Presets (5, 10, 15, 30, 45, 60, 90 minutes) or "End of Track" timer with live countdown and one-tap cancellation.
-- **Themes & Accent Colors**: Light, Dark, or System mode with 5 distinct accent color palettes (Cyan Neon, Deep Purple, Electric Blue, Sunset Orange, Emerald Green).
-
----
-
-## 4. Building the Application
-
-The project is configured for command-line build using the Gradle wrapper (`gradlew`). Visual Studio Code or any terminal can be used directly without requiring Android Studio.
+## 🛠 Building From Source
 
 ### Prerequisites
-- **JDK**: Java 17 or higher
-- **Android SDK**: API 34/35 installed with platform-tools and build-tools
-- **Environment**: Set `sdk.dir` in `local.properties` (or set `ANDROID_HOME`)
+- JDK 17 installed and configured (`JAVA_HOME`)
+- Android SDK installed (`platforms;android-35`, `build-tools;35.0.0`)
+- Visual Studio Code or Android Studio
 
 ### Build Commands
 
-#### 1. Compile Kotlin Sources
 ```bash
-./gradlew compileDebugKotlin
-```
+# Clone the repository
+git clone https://github.com/sobuj-here/Music-Player.git
+cd Music-Player
 
-#### 2. Assemble Debug APK
-```bash
+# Build Debug APK
 ./gradlew assembleDebug
-```
-The output APK is generated at:
-`app/build/outputs/apk/debug/app-debug.apk`
 
-#### 3. Assemble Release APK
-```bash
+# Build Signed Release APK
 ./gradlew assembleRelease
 ```
-The output APK is generated at:
-`app/build/outputs/apk/release/app-release-unsigned.apk`
 
-#### 4. Clean Build Cache
-```bash
-./gradlew clean
-```
+Generated APK paths:
+- Debug APK: `app/build/outputs/apk/debug/app-debug.apk`
+- Release APK: `app/build/outputs/apk/release/app-release.apk`
 
 ---
 
-## 5. Device Battery Optimization Guidance
+## 🔋 Battery Optimization Guide
 
-To guarantee continuous 48-hour background listening on devices with aggressive manufacturer RAM management (e.g., Samsung, Xiaomi, Huawei, OnePlus):
+To guarantee continuous audio playback on hardware with strict background process killers (Samsung OneUI, Xiaomi HyperOS/MIUI, OnePlus OxygenOS, Huawei EMUI):
 
-1. Open device **Settings**.
-2. Navigate to **Apps** > **Music Player**.
-3. Select **Battery** (or **App Battery Usage**).
-4. Choose **Unrestricted** (or disable "Optimize battery usage").
-5. Exclude **Music Player** from aggressive third-party task killers.
+1. Go to **Settings > Apps > Music Player > Battery**.
+2. Select **Unrestricted** (or turn off *Battery Optimization*).
+3. Ensure background activity permissions are kept enabled.
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License. Developed for clean, offline-first personal music enjoyment.

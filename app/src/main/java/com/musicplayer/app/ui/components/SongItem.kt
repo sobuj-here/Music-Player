@@ -12,12 +12,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.PlaylistAdd
-import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.DropdownMenu
@@ -158,7 +158,7 @@ fun SongItem(
                 )
                 DropdownMenuItem(
                     text = { Text("Add to Queue") },
-                    leadingIcon = { Icon(Icons.Default.QueueMusic, contentDescription = null) },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = null) },
                     onClick = {
                         menuExpanded = false
                         onAddToQueue()
@@ -166,7 +166,7 @@ fun SongItem(
                 )
                 DropdownMenuItem(
                     text = { Text("Add to Playlist") },
-                    leadingIcon = { Icon(Icons.Default.PlaylistAdd, contentDescription = null) },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = null) },
                     onClick = {
                         menuExpanded = false
                         onAddToPlaylist()
