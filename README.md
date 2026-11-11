@@ -5,16 +5,25 @@
 </div>
 
 <p align="center">
-  <b>A lightweight, high-performance, offline native Android music player engineered for seamless, uninterrupted background playback.</b>
+  <b>A modern, offline native Android music player crafted for seamless, high-fidelity audio listening and rock-solid background playback.</b>
 </p>
 
 <p align="center">
-  <a href="releases/MusicPlayer-v1.0.0-release.apk"><img src="https://img.shields.io/badge/Download-Release%20APK%20(v1.0.0)-00E5FF?style=for-the-badge&logo=android&logoColor=black" alt="Download APK" /></a>
   <img src="https://img.shields.io/badge/Kotlin-2.0.0-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin" />
-  <img src="https://img.shields.io/badge/Compose-Material%203-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose" />
+  <img src="https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white" alt="Compose Material 3" />
   <img src="https://img.shields.io/badge/ExoPlayer-Media3%201.4.1-FF6F00?style=for-the-badge&logo=google&logoColor=white" alt="Media3" />
-  <img src="https://img.shields.io/badge/Storage-100%25%20Offline-success?style=for-the-badge&logo=sqlite&logoColor=white" alt="Offline" />
+  <img src="https://img.shields.io/badge/Database-Room%20SQLite-F58220?style=for-the-badge&logo=sqlite&logoColor=white" alt="Room" />
+  <img src="https://img.shields.io/badge/Android-7.0%20to%2015%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android Support" />
+  <img src="https://img.shields.io/badge/Privacy-100%25%20Offline-107C41?style=for-the-badge&logo=shield&logoColor=white" alt="100% Offline" />
 </p>
+
+---
+
+## 📖 Overview
+
+**Music Player** is a clean, offline-first audio application built with modern Android development standards. Designed for listeners who prefer storing their music locally without tracking, intrusive subscriptions, or unnecessary battery drain, it provides an uninterrupted listening experience powered by Google's latest **AndroidX Media3** architecture.
+
+From dynamic folder exploration and fast local search to an integrated 5-band graphic equalizer and reliable lock-screen controls, Music Player delivers complete control over your music library.
 
 ---
 
@@ -24,65 +33,84 @@
   <table>
     <tr>
       <th width="33%">Now Playing</th>
-      <th width="33%">Music Library</th>
+      <th width="33%">Library & Search</th>
       <th width="33%">5-Band Equalizer</th>
     </tr>
     <tr>
       <td><img src="docs/screenshots/01_now_playing.png" alt="Now Playing Screen" width="100%" /></td>
       <td><img src="docs/screenshots/02_library.png" alt="Music Library" width="100%" /></td>
-      <td><img src="docs/screenshots/03_equalizer.png" alt="Equalizer & Sound Effects" width="100%" /></td>
+      <td><img src="docs/screenshots/03_equalizer.png" alt="Equalizer Screen" width="100%" /></td>
     </tr>
     <tr>
-      <td align="center"><i>Album Art, Scrubber & Controls</i></td>
-      <td align="center"><i>8-Tab Organization & Search</i></td>
-      <td align="center"><i>Frequency Bands & Bass Boost</i></td>
+      <td align="center"><i>Album Art, Progress & Speed</i></td>
+      <td align="center"><i>8 Categorized Tabs & Mini-Player</i></td>
+      <td align="center"><i>Frequency Sliders & Bass Boost</i></td>
     </tr>
   </table>
 </div>
 
 ---
 
-## ⚡ Highlights & Key Capabilities
+## ✨ Features
 
-- **Uninterrupted Background Playback (48h+ Capable)**: Built on AndroidX `MediaSessionService` and ExoPlayer with `C.WAKE_MODE_LOCAL`. Playback stays smooth whether the screen is locked, the user switches apps, or the Activity is destroyed by the system.
-- **Complete Local Media Scanner**: Scans device storage using the Android `MediaStore` content provider. Categorizes tracks into **All Songs**, **Albums**, **Artists**, **Folders**, **Recently Added**, **Recently Played**, **Favorites**, and **Playlists**.
-- **Hardware-Accelerated Equalizer**: 5-band frequency equalizer with 9 genre-tuned presets (*Rock, Classical, Dance, Flat, Heavy Metal, Hip Hop, Jazz, Pop, Normal*), Bass Boost, and 3D Virtualizer audio spatialization.
-- **Smart Audio Interruption Handling**: Pauses on incoming telephone calls and gracefully resumes. Automatically halts audio on headphone disconnect or Bluetooth uncoupling (`setHandleAudioBecomingNoisy(true)`).
-- **Sleep Timer Utility**: Countdown timer presets (15m, 30m, 45m, 60m), custom minute inputs, or automatic stop when the currently playing track finishes.
-- **Persistent Playback Queue & Playlists**: Add next, reorder tracks via dragging, clear queues, and manage custom playlists backed by an offline Room SQLite database.
-- **Material 3 Design System**: Adaptive Dark and Light themes accompanied by 5 selectable accent color palettes (*Royal Purple, Ocean Blue, Electric Teal, Sunset Orange, Emerald Green*).
-- **100% Offline & Private**: Zero cloud dependencies, zero analytics SDKs, zero background telemetry, and zero artificial intelligence models. Audio files and listening history never leave your device.
+### 🎧 Long-Session Background Playback
+- **MediaSessionService Architecture**: Playback runs in an independent foreground service decoupled from the Activity lifecycle. Music continues effortlessly whether the phone is locked, the display is turned off, or you switch between memory-heavy applications.
+- **Extended Listening**: Configured with `C.WAKE_MODE_LOCAL` to keep the audio subsystem active for continuous multi-hour sessions (tested for 48h+ playback without interruption).
+- **Smart Audio Focus**: Automatically pauses for incoming phone calls and resumes once finished.
+- **Audio Becoming Noisy Guard**: Instant auto-pause when wired earphones are unplugged or Bluetooth headphones disconnect, preventing unexpected audio playback over loudspeakers.
+- **Lock Screen & Headset Controls**: Full notification media controls, lock screen scrubber, and standard Bluetooth hardware button integration.
+
+### 📂 Comprehensive Music Library
+- **MediaStore Integration**: Automatically queries local storage with defensive handling for missing metadata and tags.
+- **8 Dedicated Library Tabs**:
+  - **Songs**: Chronological or alphabetical list of every track.
+  - **Albums**: Grouped collections with embedded album art.
+  - **Artists**: Discographies organized by performing artist.
+  - **Folders**: Direct directory-level browsing across storage partitions.
+  - **Recently Added**: Newly imported or downloaded tracks.
+  - **Recently Played**: Real-time listening history tracked locally.
+  - **Favorites**: One-tap favorited songs stored in Room database.
+  - **Playlists**: Custom user-created playlists with full editing support.
+- **Instant Search**: Real-time multi-field search across titles, artists, and album names.
+- **Flexible Sorting**: Sort any view by title, artist, album, or date added in ascending or descending order.
+
+### 🎚 Hardware Audio Tuning
+- **5-Band Graphic Equalizer**: Directly interfaces with Android's audio effects pipeline.
+- **Preset Tunings**: Switch between 9 presets including *Rock, Classical, Dance, Flat, Heavy Metal, Hip Hop, Jazz, Pop,* and *Normal*.
+- **Bass Boost & Virtualizer**: Granular sliders to boost low-end frequencies and expand spatial 3D surround sound.
+
+### ⏱ Smart Sleep Timer
+- Fall asleep to your favorite music without running down the device battery overnight.
+- Choose between preset countdowns (15m, 30m, 45m, 60m), custom minute values, or let the player automatically turn off after the **current track finishes**.
+
+### 🎨 Material 3 Customization
+- Seamless **Dark** and **Light** themes.
+- Five distinct accent palettes: *Royal Purple, Ocean Blue, Electric Teal, Sunset Orange,* and *Emerald Green*.
+- Persistent bottom mini-player for smooth, single-tap access back to the full-screen player.
+
+### 🔒 100% Offline & Private
+- Strictly zero network dependencies: no ads, no trackers, no cloud sync, and zero AI telemetry.
+- All playlists, playback history, and user settings stay entirely on your device.
 
 ---
 
-## 🏗 Architecture & Engineering
+## 📥 Download & Installation
 
-The application follows the recommended Android Architecture guidelines with separation of concerns:
+The latest release is pre-compiled, signed, and ready to install on Android devices running **Android 7.0 (API 24)** or higher.
 
-```
-com.musicplayer.app
-├── data
-│   ├── local          # Room Database, DAOs (Playlists, Favorites, Play History)
-│   ├── mediastore     # Async MediaStore queries, metadata extraction, folder grouping
-│   └── repository     # Single source of truth: MusicRepository & PreferencesRepository
-├── model              # Immutable domain entities (Song, Album, Artist, Playlist, PlaybackState)
-├── player             # PlayerConnection (IPC Controller bridge), Equalizer, SleepTimer
-├── service            # MusicService (MediaSessionService, AudioFocus, Notification channel)
-├── ui
-│   ├── components     # Reusable Compose widgets (MiniPlayer, SongItem, AlbumCard, SearchBar)
-│   ├── screens        # Full-screen Composable views (MainScreen, NowPlaying, Equalizer, Settings)
-│   └── theme          # Dynamic Material 3 typography, color palettes, and themes
-├── util               # Modern permission handling (API 33+ READ_MEDIA_AUDIO), time & file formatters
-└── viewmodel          # ViewModels managing state flows (Main, Playlist, Equalizer, Settings)
-```
+<p align="center">
+  <a href="https://github.com/sobuj-here/Music-Player/releases/download/v1.0.0/MusicPlayer-v1.0.0.apk">
+    <img src="https://img.shields.io/badge/Download%20APK-v1.0.0%20(Latest)-00E5FF?style=for-the-badge&logo=android&logoColor=black" alt="Download APK" />
+  </a>
+  <a href="https://github.com/sobuj-here/Music-Player/releases">
+    <img src="https://img.shields.io/badge/Release%20Notes-v1.0.0-181717?style=for-the-badge&logo=github&logoColor=white" alt="Release Notes" />
+  </a>
+</p>
 
----
-
-## 📦 Quick Download & Installation
-
-You can download the pre-compiled, signed APK directly:
-
-📥 **[Download MusicPlayer-v1.0.0-release.apk](releases/MusicPlayer-v1.0.0-release.apk)** (15 MB)
+### Direct Installation
+1. Tap the **Download APK** button above to download `MusicPlayer-v1.0.0.apk`.
+2. Open the downloaded file on your Android device and confirm installation.
+3. Grant audio permission on initial startup to allow the app to discover your local library.
 
 ### Installation via ADB
 ```bash
@@ -91,43 +119,67 @@ adb install -r releases/MusicPlayer-v1.0.0-release.apk
 
 ---
 
+## 🏗 Architecture & Code Structure
+
+The application adopts the official Android Architecture patterns (MVVM + Repository) with reactive state management:
+
+```
+com.musicplayer.app
+├── data
+│   ├── local          # Room Database, DAOs, & Entities (Playlists, Favorites, History)
+│   ├── mediastore     # Async MediaStore scanner with robust column null-safety
+│   └── repository     # Single sources of truth: MusicRepository & PreferencesRepository
+├── model              # Immutable domain models (Song, Album, Artist, Playlist, PlaybackState)
+├── player             # PlayerConnection (MediaController bridge), Equalizer, SleepTimer
+├── service            # MusicService (MediaSessionService, AudioFocus, WakeLock)
+├── ui
+│   ├── components     # Reusable Compose widgets (MiniPlayer, SongItem, AlbumCard, SearchBar)
+│   ├── screens        # Full screens (MainScreen, NowPlayingScreen, EqualizerScreen, SettingsScreen)
+│   └── theme          # Dynamic Material 3 palettes, Typography, and System Bar styling
+├── util               # Modern permission utilities (API 33+ READ_MEDIA_AUDIO), time formatters
+└── viewmodel          # ViewModels managing UI state flows (Main, Playlist, Equalizer, Settings)
+```
+
+---
+
 ## 🛠 Building From Source
 
 ### Prerequisites
-- JDK 17 installed and configured (`JAVA_HOME`)
-- Android SDK installed (`platforms;android-35`, `build-tools;35.0.0`)
+- Java Development Kit (JDK) 17
+- Android SDK (compileSdk 35, build-tools 35.0.0)
 - Visual Studio Code or Android Studio
 
-### Build Commands
+### Compilation Steps
 
 ```bash
 # Clone the repository
 git clone https://github.com/sobuj-here/Music-Player.git
 cd Music-Player
 
-# Build Debug APK
+# Build debug APK
 ./gradlew assembleDebug
 
-# Build Signed Release APK
+# Build signed release APK
 ./gradlew assembleRelease
 ```
 
 Generated APK paths:
-- Debug APK: `app/build/outputs/apk/debug/app-debug.apk`
-- Release APK: `app/build/outputs/apk/release/app-release.apk`
+- Debug: `app/build/outputs/apk/debug/app-debug.apk`
+- Release: `app/build/outputs/apk/release/app-release.apk`
 
 ---
 
-## 🔋 Battery Optimization Guide
+## 🔋 Recommended Battery Settings
 
-To guarantee continuous audio playback on hardware with strict background process killers (Samsung OneUI, Xiaomi HyperOS/MIUI, OnePlus OxygenOS, Huawei EMUI):
+Certain Android distributions (such as Samsung One UI, Xiaomi MIUI/HyperOS, OnePlus OxygenOS, and Huawei EMUI) aggressively restrict background services after extended periods of screen inactivity.
 
-1. Go to **Settings > Apps > Music Player > Battery**.
-2. Select **Unrestricted** (or turn off *Battery Optimization*).
-3. Ensure background activity permissions are kept enabled.
+To ensure uninterrupted multi-day playback:
+1. Open **Settings > Apps > Music Player > Battery**.
+2. Set battery usage to **Unrestricted** (or turn off *Battery Optimization*).
+3. Ensure background activity permissions are permitted.
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License. Developed for clean, offline-first personal music enjoyment.
+This project is licensed under the **MIT License**. Free for personal and developer use.
