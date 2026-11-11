@@ -108,13 +108,13 @@ fun EqualizerScreen(
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
                         Text(
-                            text = "Equalizer Unavailable",
+                            text = "Equalizer Inactive",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "Audio effects are either not supported on this device/ROM or an active audio track must be playing to initialize the equalizer session.",
+                            text = state.statusMessage,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

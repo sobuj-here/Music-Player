@@ -16,16 +16,26 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
+data class LibraryStats(
+    val totalSongs: Int = 0,
+    val totalSizeBytes: Long = 0L,
+    val totalDurationMs: Long = 0L
+)
+
 class MusicRepository(
     private val scanner: MediaStoreScanner,
-    private val database: MusicDatabase
+    private val database: MusicDatabase,
+    private val preferencesRepository: PreferencesRepository
 ) {
     private val scope = CoroutineScope(Dispatchers.IO)
 
@@ -36,12 +46,35 @@ class MusicRepository(
     private val favoriteIdsFlow: Flow<List<Long>> = database.favoriteDao().getAllFavoriteIds()
     private val recentlyPlayedIdsFlow: Flow<List<Long>> = database.historyDao().getRecentlyPlayedIds()
 
-    val songsFlow: Flow<List<Song>> = combine(_rawSongs, favoriteIdsFlow) { songs, favIds ->
+    val songsFlow: Flow<List<Song>> = combine(
+        _rawSongs,
+        favoriteIdsFlow,
+        preferencesRepository.hideShortAudioFlow,
+        preferencesRepository.excludedFoldersFlow
+    ) { songs, favIds, hideShort, excluded ->
         val favSet = favIds.toSet()
-        songs.map { it.copy(isFavorite = favSet.contains(it.id)) }
+        songs.filter { song ->
+            if (hideShort && song.duration < 30000L) return@filter false
+            if (excluded.isNotEmpty()) {
+                val parent = File(song.data).parent ?: ""
+                if (excluded.any { parent.startsWith(it) }) return@filter false
+            }
+            true
+        }.map { it.copy(isFavorite = favSet.contains(it.id)) }
     }
 
-    val albumsFlow: Flow<List<Album>> = _rawSongs.map { songs ->
+    val allSongs: StateFlow<List<Song>> = songsFlow
+        .stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    val libraryStats: StateFlow<LibraryStats> = allSongs.map { songs ->
+        LibraryStats(
+            totalSongs = songs.size,
+            totalSizeBytes = songs.sumOf { it.size },
+            totalDurationMs = songs.sumOf { it.duration }
+        )
+    }.stateIn(scope, SharingStarted.WhileSubscribed(5000), LibraryStats())
+
+    val albumsFlow: Flow<List<Album>> = allSongs.map { songs ->
         songs.groupBy { it.albumId }
             .map { (albumId, songsInAlbum) ->
                 val first = songsInAlbum.first()
@@ -56,13 +89,13 @@ class MusicRepository(
             .sortedBy { it.title.lowercase() }
     }
 
-    val artistsFlow: Flow<List<Artist>> = _rawSongs.map { songs ->
+    val artistsFlow: Flow<List<Artist>> = allSongs.map { songs ->
         songs.groupBy { it.artist.lowercase() }
             .map { (_, songsForArtist) ->
                 val first = songsForArtist.first()
                 val distinctAlbums = songsForArtist.map { it.albumId }.distinct().size
                 Artist(
-                    id = first.id, // reference ID
+                    id = first.id,
                     name = first.artist,
                     songCount = songsForArtist.size,
                     albumCount = distinctAlbums
@@ -71,7 +104,7 @@ class MusicRepository(
             .sortedBy { it.name.lowercase() }
     }
 
-    val foldersFlow: Flow<List<Folder>> = _rawSongs.map { songs ->
+    val foldersFlow: Flow<List<Folder>> = allSongs.map { songs ->
         songs.mapNotNull { song ->
             val file = File(song.data)
             val parent = file.parentFile

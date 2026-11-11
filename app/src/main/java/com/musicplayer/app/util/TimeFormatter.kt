@@ -18,4 +18,6 @@ object TimeFormatter {
             String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
         }
     }
+
+    fun formatDuration(ms: Long): String = formatMs(ms)
 }

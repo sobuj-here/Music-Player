@@ -30,8 +30,8 @@ class MusicPlayerApplication : Application() {
 
         database = MusicDatabase.getInstance(this)
         scanner = MediaStoreScanner(this)
-        musicRepository = MusicRepository(scanner, database)
         preferencesRepository = PreferencesRepository(this)
+        musicRepository = MusicRepository(scanner, database, preferencesRepository)
         playerConnection = PlayerConnection(this, musicRepository, preferencesRepository)
     }
 

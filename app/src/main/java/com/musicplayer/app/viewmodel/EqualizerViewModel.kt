@@ -22,7 +22,7 @@ class EqualizerViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun usePreset(presetIndex: Int) {
-        controller.usePreset(presetIndex)
+        controller.applyPreset(presetIndex)
     }
 
     fun setBassBoost(strength: Short) {
