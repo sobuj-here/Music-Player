@@ -7,6 +7,7 @@ import com.musicplayer.app.MusicPlayerApplication
 import com.musicplayer.app.model.Album
 import com.musicplayer.app.model.Artist
 import com.musicplayer.app.model.Folder
+import com.musicplayer.app.model.PlaybackContext
 import com.musicplayer.app.model.PlaybackState
 import com.musicplayer.app.model.Playlist
 import com.musicplayer.app.model.RepeatMode
@@ -137,20 +138,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val playbackState: StateFlow<PlaybackState> = playerConnection.playbackState
 
-    fun playSong(song: Song, fromList: List<Song>? = null) {
+    fun playSong(song: Song, fromList: List<Song>? = null, context: PlaybackContext? = null) {
         val list = fromList ?: allSongs.value
         val index = list.indexOfFirst { it.id == song.id }.let { if (it == -1) 0 else it }
-        playerConnection.playSongs(list, index)
+        playerConnection.playSongs(list, index, context)
     }
 
-    fun playAll(songs: List<Song>, startIndex: Int = 0) {
-        playerConnection.playSongs(songs, startIndex)
+    fun playAll(songs: List<Song>, startIndex: Int = 0, context: PlaybackContext? = null) {
+        playerConnection.playSongs(songs, startIndex, context)
     }
 
-    fun shuffleAll(songs: List<Song>) {
+    fun shuffleAll(songs: List<Song>, context: PlaybackContext? = null) {
         if (songs.isNotEmpty()) {
             val shuffled = songs.shuffled()
-            playerConnection.playSongs(shuffled, 0)
+            playerConnection.playSongs(shuffled, 0, context)
+            playerConnection.setShuffleEnabled(true)
         }
     }
 

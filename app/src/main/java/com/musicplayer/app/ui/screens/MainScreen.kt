@@ -53,6 +53,8 @@ import androidx.compose.ui.unit.dp
 import com.musicplayer.app.model.Album
 import com.musicplayer.app.model.Artist
 import com.musicplayer.app.model.Folder
+import com.musicplayer.app.model.PlaybackContext
+import com.musicplayer.app.model.PlaybackContextType
 import com.musicplayer.app.model.Playlist
 import com.musicplayer.app.model.Song
 import com.musicplayer.app.navigation.Navigator
@@ -245,9 +247,9 @@ fun MainScreen(
                                 songs = songs,
                                 currentSongId = playbackState.currentSong?.id,
                                 isPlaying = playbackState.isPlaying,
-                                onSongClick = { mainViewModel.playSong(it, songs) },
-                                onPlayAll = { mainViewModel.playAll(songs) },
-                                onShuffleAll = { mainViewModel.shuffleAll(songs) },
+                                onSongClick = { mainViewModel.playSong(it, songs, PlaybackContext(PlaybackContextType.ALL_SONGS, "")) },
+                                onPlayAll = { mainViewModel.playAll(songs, context = PlaybackContext(PlaybackContextType.ALL_SONGS, "")) },
+                                onShuffleAll = { mainViewModel.shuffleAll(songs, context = PlaybackContext(PlaybackContextType.ALL_SONGS, "")) },
                                 onSortClick = { showSortDialog = true },
                                 onFavoriteToggle = { mainViewModel.toggleFavorite(it) },
                                 onPlayNext = { mainViewModel.playNext(it) },
@@ -327,15 +329,16 @@ fun MainScreen(
             is Screen.AlbumDetail -> {
                 val album = currentScreen.album
                 val albumSongs = songs.filter { it.albumId == album.id }
+                val albumContext = PlaybackContext(PlaybackContextType.ALBUM, album.id.toString())
                 AlbumDetailScreen(
                     album = album,
                     songs = albumSongs,
                     currentSongId = playbackState.currentSong?.id,
                     isPlaying = playbackState.isPlaying,
                     onBackClick = { navigator.pop() },
-                    onSongClick = { mainViewModel.playSong(it, albumSongs) },
-                    onPlayAll = { mainViewModel.playAll(albumSongs) },
-                    onShuffleAll = { mainViewModel.shuffleAll(albumSongs) },
+                    onSongClick = { mainViewModel.playSong(it, albumSongs, albumContext) },
+                    onPlayAll = { mainViewModel.playAll(albumSongs, context = albumContext) },
+                    onShuffleAll = { mainViewModel.shuffleAll(albumSongs, context = albumContext) },
                     onFavoriteToggle = { mainViewModel.toggleFavorite(it) },
                     onPlayNext = { mainViewModel.playNext(it) },
                     onAddToQueue = { mainViewModel.addToQueue(it) },
@@ -347,15 +350,16 @@ fun MainScreen(
             is Screen.ArtistDetail -> {
                 val artist = currentScreen.artist
                 val artistSongs = songs.filter { it.artist.equals(artist.name, ignoreCase = true) }
+                val artistContext = PlaybackContext(PlaybackContextType.ARTIST, artist.name)
                 ArtistDetailScreen(
                     artist = artist,
                     songs = artistSongs,
                     currentSongId = playbackState.currentSong?.id,
                     isPlaying = playbackState.isPlaying,
                     onBackClick = { navigator.pop() },
-                    onSongClick = { mainViewModel.playSong(it, artistSongs) },
-                    onPlayAll = { mainViewModel.playAll(artistSongs) },
-                    onShuffleAll = { mainViewModel.shuffleAll(artistSongs) },
+                    onSongClick = { mainViewModel.playSong(it, artistSongs, artistContext) },
+                    onPlayAll = { mainViewModel.playAll(artistSongs, context = artistContext) },
+                    onShuffleAll = { mainViewModel.shuffleAll(artistSongs, context = artistContext) },
                     onFavoriteToggle = { mainViewModel.toggleFavorite(it) },
                     onPlayNext = { mainViewModel.playNext(it) },
                     onAddToQueue = { mainViewModel.addToQueue(it) },
@@ -367,15 +371,16 @@ fun MainScreen(
             is Screen.FolderDetail -> {
                 val folder = currentScreen.folder
                 val folderSongs = songs.filter { File(it.data).parent == folder.path }
+                val folderContext = PlaybackContext(PlaybackContextType.FOLDER, folder.path)
                 FolderDetailScreen(
                     folder = folder,
                     songs = folderSongs,
                     currentSongId = playbackState.currentSong?.id,
                     isPlaying = playbackState.isPlaying,
                     onBackClick = { navigator.pop() },
-                    onSongClick = { mainViewModel.playSong(it, folderSongs) },
-                    onPlayAll = { mainViewModel.playAll(folderSongs) },
-                    onShuffleAll = { mainViewModel.shuffleAll(folderSongs) },
+                    onSongClick = { mainViewModel.playSong(it, folderSongs, folderContext) },
+                    onPlayAll = { mainViewModel.playAll(folderSongs, context = folderContext) },
+                    onShuffleAll = { mainViewModel.shuffleAll(folderSongs, context = folderContext) },
                     onFavoriteToggle = { mainViewModel.toggleFavorite(it) },
                     onPlayNext = { mainViewModel.playNext(it) },
                     onAddToQueue = { mainViewModel.addToQueue(it) },

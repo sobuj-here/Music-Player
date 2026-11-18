@@ -123,6 +123,15 @@ class MusicRepository(
             .sortedBy { it.name.lowercase() }
     }
 
+    val allAlbums: StateFlow<List<Album>> = albumsFlow
+        .stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    val allArtists: StateFlow<List<Artist>> = artistsFlow
+        .stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    val allFolders: StateFlow<List<Folder>> = foldersFlow
+        .stateIn(scope, SharingStarted.Eagerly, emptyList())
+
     val favoritesFlow: Flow<List<Song>> = songsFlow.map { songs ->
         songs.filter { it.isFavorite }
     }

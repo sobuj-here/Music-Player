@@ -47,6 +47,17 @@ class PreferencesRepository(private val context: Context) {
         val HIDE_SHORT_AUDIO = booleanPreferencesKey("hide_short_audio")
         val NOTIFICATION_ARTWORK = booleanPreferencesKey("notification_artwork")
         val EXCLUDED_FOLDERS = stringSetPreferencesKey("excluded_folders")
+
+        // Equalizer persistence
+        val EQUALIZER_ENABLED = booleanPreferencesKey("equalizer_enabled")
+        val EQUALIZER_PRESET = intPreferencesKey("equalizer_preset")
+        val EQUALIZER_BAND_LEVELS = stringPreferencesKey("equalizer_band_levels")
+        val BASS_BOOST_STRENGTH = intPreferencesKey("bass_boost_strength")
+        val VIRTUALIZER_STRENGTH = intPreferencesKey("virtualizer_strength")
+
+        // Playback context persistence
+        val PLAYBACK_CONTEXT_TYPE = stringPreferencesKey("playback_context_type")
+        val PLAYBACK_CONTEXT_ID = stringPreferencesKey("playback_context_id")
     }
 
     val repeatModeFlow: Flow<RepeatMode> = context.dataStore.data.map { preferences ->
@@ -253,5 +264,95 @@ class PreferencesRepository(private val context: Context) {
         val songId = prefs[PreferencesKeys.LAST_PLAYED_SONG_ID] ?: -1L
         val pos = prefs[PreferencesKeys.LAST_PLAYED_POSITION] ?: 0L
         return Pair(songId, pos)
+    }
+
+    // Equalizer persistence flows & setters
+    val equalizerEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[PreferencesKeys.EQUALIZER_ENABLED] ?: false
+    }
+
+    val equalizerPresetFlow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[PreferencesKeys.EQUALIZER_PRESET] ?: 0
+    }
+
+    suspend fun setEqualizerEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.EQUALIZER_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setEqualizerPreset(presetIndex: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.EQUALIZER_PRESET] = presetIndex
+        }
+    }
+
+    suspend fun setEqualizerBandLevels(bandLevels: Map<Int, Short>) {
+        context.dataStore.edit { preferences ->
+            val serialized = bandLevels.entries.joinToString(",") { "${it.key}:${it.value}" }
+            preferences[PreferencesKeys.EQUALIZER_BAND_LEVELS] = serialized
+        }
+    }
+
+    suspend fun setBassBoostStrength(strength: Short) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.BASS_BOOST_STRENGTH] = strength.toInt()
+        }
+    }
+
+    suspend fun setVirtualizerStrength(strength: Short) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.VIRTUALIZER_STRENGTH] = strength.toInt()
+        }
+    }
+
+    data class EqualizerPreferences(
+        val isEnabled: Boolean,
+        val presetIndex: Int,
+        val bandLevels: Map<Int, Short>,
+        val bassBoostStrength: Short,
+        val virtualizerStrength: Short
+    )
+
+    suspend fun getEqualizerPreferences(): EqualizerPreferences {
+        val prefs = context.dataStore.data.first()
+        val isEnabled = prefs[PreferencesKeys.EQUALIZER_ENABLED] ?: false
+        val presetIndex = prefs[PreferencesKeys.EQUALIZER_PRESET] ?: 0
+        val rawBands = prefs[PreferencesKeys.EQUALIZER_BAND_LEVELS] ?: ""
+        val bandLevels = if (rawBands.isBlank()) emptyMap() else {
+            rawBands.split(",").mapNotNull { pair ->
+                val parts = pair.split(":")
+                if (parts.size == 2) {
+                    val band = parts[0].toIntOrNull()
+                    val level = parts[1].toShortOrNull()
+                    if (band != null && level != null) band to level else null
+                } else null
+            }.toMap()
+        }
+        val bassBoostStrength = (prefs[PreferencesKeys.BASS_BOOST_STRENGTH] ?: 0).toShort()
+        val virtualizerStrength = (prefs[PreferencesKeys.VIRTUALIZER_STRENGTH] ?: 0).toShort()
+
+        return EqualizerPreferences(
+            isEnabled = isEnabled,
+            presetIndex = presetIndex,
+            bandLevels = bandLevels,
+            bassBoostStrength = bassBoostStrength,
+            virtualizerStrength = virtualizerStrength
+        )
+    }
+
+    // Playback context persistence
+    suspend fun savePlaybackContext(type: String, identifier: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.PLAYBACK_CONTEXT_TYPE] = type
+            preferences[PreferencesKeys.PLAYBACK_CONTEXT_ID] = identifier
+        }
+    }
+
+    suspend fun getSavedPlaybackContext(): Pair<String, String>? {
+        val prefs = context.dataStore.data.first()
+        val type = prefs[PreferencesKeys.PLAYBACK_CONTEXT_TYPE]
+        val id = prefs[PreferencesKeys.PLAYBACK_CONTEXT_ID]
+        return if (!type.isNullOrBlank() && id != null) Pair(type, id) else null
     }
 }

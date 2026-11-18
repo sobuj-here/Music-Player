@@ -1,11 +1,14 @@
 package com.musicplayer.app.player
 
-import android.media.audiofx.AudioEffect
 import android.media.audiofx.BassBoost
 import android.media.audiofx.Equalizer
 import android.media.audiofx.Virtualizer
+import com.musicplayer.app.data.repository.PreferencesRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 data class EqualizerBand(
@@ -29,7 +32,10 @@ data class EqualizerState(
     val statusMessage: String = "Waiting for active audio session..."
 )
 
-class EqualizerController {
+class EqualizerController(
+    private val preferencesRepository: PreferencesRepository
+) {
+    private val scope = CoroutineScope(Dispatchers.IO)
 
     private var equalizer: Equalizer? = null
     private var bassBoost: BassBoost? = null
@@ -38,6 +44,8 @@ class EqualizerController {
 
     // Standard preset frequency curves in normalized decibels (-10dB to +10dB)
     companion object {
+        const val EFFECT_PRIORITY = 1000
+
         val STANDARD_PRESETS = listOf(
             "Normal" to listOf(0f, 0f, 0f, 0f, 0f),
             "Rock" to listOf(4.5f, 2.5f, -1.0f, 2.0f, 5.0f),
@@ -57,26 +65,43 @@ class EqualizerController {
     )
     val state = _state.asStateFlow()
 
+    init {
+        // Load saved equalizer preferences on startup
+        scope.launch {
+            try {
+                val saved = preferencesRepository.getEqualizerPreferences()
+                _state.value = _state.value.copy(
+                    isEnabled = saved.isEnabled,
+                    currentPreset = saved.presetIndex,
+                    bassBoostStrength = saved.bassBoostStrength,
+                    virtualizerStrength = saved.virtualizerStrength
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     @Suppress("DEPRECATION")
     @Synchronized
     fun attachAudioSession(audioSessionId: Int) {
         if (audioSessionId <= 0) {
             _state.value = _state.value.copy(
-                isSupported = false,
                 statusMessage = "Audio session inactive. Start music playback to activate equalizer."
             )
             return
         }
 
         if (audioSessionId == currentAudioSessionId && equalizer != null) {
+            reapplyIfEnabled(audioSessionId)
             return
         }
 
-        release()
+        releaseNativeEffects()
         currentAudioSessionId = audioSessionId
 
         try {
-            val eq = Equalizer(0, audioSessionId).apply {
+            val eq = Equalizer(EFFECT_PRIORITY, audioSessionId).apply {
                 enabled = _state.value.isEnabled
             }
             equalizer = eq
@@ -100,7 +125,7 @@ class EqualizerController {
             // Bass Boost
             var bbSupported = false
             try {
-                bassBoost = BassBoost(0, audioSessionId).apply {
+                bassBoost = BassBoost(EFFECT_PRIORITY, audioSessionId).apply {
                     if (strengthSupported) {
                         bbSupported = true
                         enabled = _state.value.isEnabled
@@ -114,7 +139,7 @@ class EqualizerController {
             // Virtualizer
             var virtSupported = false
             try {
-                virtualizer = Virtualizer(0, audioSessionId).apply {
+                virtualizer = Virtualizer(EFFECT_PRIORITY, audioSessionId).apply {
                     if (strengthSupported) {
                         virtSupported = true
                         enabled = _state.value.isEnabled
@@ -133,24 +158,67 @@ class EqualizerController {
                 statusMessage = "Equalizer active on audio session $audioSessionId"
             )
 
-            // Re-apply preset or band levels if already selected
-            applyPreset(_state.value.currentPreset)
+            // Re-apply saved preset and custom band levels
+            applyPresetInternal(_state.value.currentPreset)
 
         } catch (e: Exception) {
             e.printStackTrace()
+            // Do not permanently disable if it's a temporary audio session state
             _state.value = _state.value.copy(
-                isSupported = false,
-                statusMessage = "Equalizer not supported by this device's audio hardware."
+                statusMessage = "Attaching to audio session ($audioSessionId)..."
             )
         }
     }
 
+    /**
+     * Re-verifies that the hardware effects are attached and enabled.
+     * Prevents equalizer from silently turning off on track transition.
+     */
+    @Synchronized
+    fun reapplyIfEnabled(audioSessionId: Int) {
+        if (!_state.value.isEnabled) return
+
+        if (equalizer == null || currentAudioSessionId != audioSessionId) {
+            attachAudioSession(audioSessionId)
+            return
+        }
+
+        try {
+            val eq = equalizer
+            if (eq != null && !eq.enabled) {
+                eq.enabled = true
+            }
+            val bb = bassBoost
+            if (bb != null && bb.strengthSupported && !bb.enabled) {
+                bb.enabled = true
+                bb.setStrength(_state.value.bassBoostStrength)
+            }
+            val virt = virtualizer
+            if (virt != null && virt.strengthSupported && !virt.enabled) {
+                virt.enabled = true
+                virt.setStrength(_state.value.virtualizerStrength)
+            }
+        } catch (e: Exception) {
+            // If Android AudioFlinger recreated session or threw DeadObjectException
+            try {
+                releaseNativeEffects()
+                attachAudioSession(audioSessionId)
+            } catch (ex: Exception) {
+                ex.printStackTrace()
+            }
+        }
+    }
+
     fun setEnabled(enabled: Boolean) {
+        _state.value = _state.value.copy(isEnabled = enabled)
+        scope.launch {
+            preferencesRepository.setEqualizerEnabled(enabled)
+        }
+
         try {
             equalizer?.enabled = enabled
             bassBoost?.enabled = enabled
             virtualizer?.enabled = enabled
-            _state.value = _state.value.copy(isEnabled = enabled)
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -162,18 +230,30 @@ class EqualizerController {
             val updatedBands = _state.value.bands.map { band ->
                 if (band.index == bandIndex) band.copy(currentLevel = level) else band
             }
-            // Mark preset as Custom
             val customIndex = STANDARD_PRESETS.indexOfFirst { it.first == "Custom" }.coerceAtLeast(0)
             _state.value = _state.value.copy(
                 bands = updatedBands,
                 currentPreset = customIndex
             )
+
+            scope.launch {
+                val levelsMap = updatedBands.associate { it.index to it.currentLevel }
+                preferencesRepository.setEqualizerBandLevels(levelsMap)
+                preferencesRepository.setEqualizerPreset(customIndex)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
     fun applyPreset(presetIndex: Int) {
+        applyPresetInternal(presetIndex)
+        scope.launch {
+            preferencesRepository.setEqualizerPreset(presetIndex)
+        }
+    }
+
+    private fun applyPresetInternal(presetIndex: Int) {
         if (presetIndex < 0 || presetIndex >= STANDARD_PRESETS.size) return
         val preset = STANDARD_PRESETS[presetIndex]
         val eq = equalizer ?: return
@@ -188,7 +268,6 @@ class EqualizerController {
                     band
                 } else {
                     val targetDb = gains.getOrElse(i) { 0f }
-                    // Map -10dB..+10dB to minRange..maxRange (typically -1500mB to +1500mB)
                     val normalized = (targetDb / 10f).coerceIn(-1f, 1f)
                     val rawLevel = if (normalized >= 0) {
                         (normalized * maxRange).roundToInt().toShort()
@@ -196,7 +275,11 @@ class EqualizerController {
                         (-normalized * minRange).roundToInt().toShort()
                     }
                     val clamped = rawLevel.coerceIn(band.minLevel, band.maxLevel)
-                    eq.setBandLevel(i.toShort(), clamped)
+                    try {
+                        eq.setBandLevel(i.toShort(), clamped)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                     band.copy(currentLevel = clamped)
                 }
             }
@@ -215,6 +298,9 @@ class EqualizerController {
         try {
             bassBoost?.setStrength(strength)
             _state.value = _state.value.copy(bassBoostStrength = strength)
+            scope.launch {
+                preferencesRepository.setBassBoostStrength(strength)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -225,12 +311,15 @@ class EqualizerController {
         try {
             virtualizer?.setStrength(strength)
             _state.value = _state.value.copy(virtualizerStrength = strength)
+            scope.launch {
+                preferencesRepository.setVirtualizerStrength(strength)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
-    fun release() {
+    private fun releaseNativeEffects() {
         try {
             equalizer?.release()
             bassBoost?.release()
@@ -241,7 +330,11 @@ class EqualizerController {
             equalizer = null
             bassBoost = null
             virtualizer = null
-            currentAudioSessionId = 0
         }
+    }
+
+    fun release() {
+        releaseNativeEffects()
+        currentAudioSessionId = 0
     }
 }

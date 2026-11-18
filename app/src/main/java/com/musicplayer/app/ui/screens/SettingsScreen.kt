@@ -1,5 +1,9 @@
 package com.musicplayer.app.ui.screens
 
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
@@ -32,6 +37,7 @@ import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Storage
@@ -91,6 +97,19 @@ fun SettingsScreen(
     var showClearHistoryDialog by remember { mutableStateOf(false) }
     var showLicensesDialog by remember { mutableStateOf(false) }
     var showPrivacyDialog by remember { mutableStateOf(false) }
+
+    val appVersion = remember {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.packageManager.getPackageInfo(context.packageName, PackageManager.PackageInfoFlags.of(0)).versionName ?: "1.1.0"
+            } else {
+                @Suppress("DEPRECATION")
+                context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.1.0"
+            }
+        } catch (e: Exception) {
+            "1.1.0"
+        }
+    }
 
     LaunchedEffect(Unit) {
         settingsViewModel.messageEvents.collect { msg ->
@@ -450,7 +469,7 @@ fun SettingsScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Version 1.0.0 (Release)",
+                        text = "Version $appVersion (Release)",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -481,23 +500,45 @@ fun SettingsScreen(
 
                     SettingsDivider()
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "Developer",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = "Md. Sobuj Ali (github.com/sobuj-here)",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                    SettingsClickableRow(
+                        title = "Developer GitHub Profile",
+                        subtitle = "Md. Sobuj Ali (github.com/sobuj-here)",
+                        icon = Icons.Default.Code,
+                        onClick = {
+                            try {
+                                val browserIntent = Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse("https://github.com/sobuj-here")
+                                ).apply {
+                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                }
+                                context.startActivity(browserIntent)
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Could not open browser", Toast.LENGTH_SHORT).show()
+                            }
                         }
-                    }
+                    )
+
+                    SettingsDivider()
+
+                    SettingsClickableRow(
+                        title = "Source Code Repository",
+                        subtitle = "github.com/sobuj-here/Music-Player",
+                        icon = Icons.Default.Public,
+                        onClick = {
+                            try {
+                                val repoIntent = Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse("https://github.com/sobuj-here/Music-Player")
+                                ).apply {
+                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                }
+                                context.startActivity(repoIntent)
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Could not open browser", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    )
                 }
             }
 

@@ -27,6 +27,15 @@ From dynamic folder exploration and fast local search to an integrated 5-band gr
 
 ---
 
+## 🚀 What's New in v1.1.0
+
+- **Continuous Collection Playback**: Playing an Album, Artist, or Folder now automatically advances to the next collection when the queue ends, eliminating unexpected playback stops.
+- **Persistent Equalizer**: Resolved an issue where equalizer effects were lost across tracks. Hardware effects, custom band levels, presets, bass boost, and virtualizer are now saved in DataStore and re-applied automatically.
+- **Interactive Developer Links**: Developer profile and repository source links in the Settings screen are now directly clickable.
+- **Dynamic Version Metadata**: The About dialog now dynamically displays runtime version info from the package manifest.
+
+---
+
 ## 📱 Visual Showcase
 
 <div align="center">
@@ -104,22 +113,22 @@ From dynamic folder exploration and fast local search to an integrated 5-band gr
 The latest release is pre-compiled, signed, and ready to install on Android devices running **Android 7.0 (API 24)** or higher.
 
 <p align="center">
-  <a href="https://github.com/sobuj-here/Music-Player/releases/download/v1.0.0/MusicPlayer-v1.0.0.apk">
-    <img src="https://img.shields.io/badge/Download%20APK-v1.0.0%20(Latest)-00E5FF?style=for-the-badge&logo=android&logoColor=black" alt="Download APK" />
+  <a href="https://github.com/sobuj-here/Music-Player/releases/download/v1.1.0/MusicPlayer-v1.1.0.apk">
+    <img src="https://img.shields.io/badge/Download%20APK-v1.1.0%20(Latest)-00E5FF?style=for-the-badge&logo=android&logoColor=black" alt="Download APK" />
   </a>
   <a href="https://github.com/sobuj-here/Music-Player/releases">
-    <img src="https://img.shields.io/badge/Release%20Notes-v1.0.0-181717?style=for-the-badge&logo=github&logoColor=white" alt="Release Notes" />
+    <img src="https://img.shields.io/badge/Release%20Notes-v1.1.0-181717?style=for-the-badge&logo=github&logoColor=white" alt="Release Notes" />
   </a>
 </p>
 
 ### Direct Installation
-1. Tap the **Download APK** button above to download `MusicPlayer-v1.0.0.apk`.
+1. Tap the **Download APK** button above to download `MusicPlayer-v1.1.0.apk`.
 2. Open the downloaded file on your Android device and confirm installation.
 3. Grant audio permission on initial startup to allow the app to discover your local library.
 
 ### Installation via ADB
 ```bash
-adb install -r releases/MusicPlayer-v1.0.0-release.apk
+adb install -r releases/MusicPlayer-v1.1.0-release.apk
 ```
 
 ---

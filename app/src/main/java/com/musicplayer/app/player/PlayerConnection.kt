@@ -17,10 +17,13 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.musicplayer.app.data.repository.MusicRepository
 import com.musicplayer.app.data.repository.PreferencesRepository
+import com.musicplayer.app.model.PlaybackContext
+import com.musicplayer.app.model.PlaybackContextType
 import com.musicplayer.app.model.PlaybackState
 import com.musicplayer.app.model.RepeatMode
 import com.musicplayer.app.model.Song
 import com.musicplayer.app.service.MusicService
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -47,8 +50,10 @@ class PlayerConnection(
     private var currentSongList = mutableListOf<Song>()
     private var positionTickerJob: Job? = null
     private var hasRestoredState = false
+    private var currentAudioSessionId: Int = 0
+    private var currentPlaybackContext: PlaybackContext? = null
 
-    val equalizerController = EqualizerController()
+    val equalizerController = EqualizerController(preferencesRepository)
     val sleepTimerManager = SleepTimerManager(scope) {
         pause()
     }
@@ -61,6 +66,18 @@ class PlayerConnection(
         override fun onPlaybackStateChanged(playbackState: Int) {
             if (playbackState == Player.STATE_ENDED) {
                 sleepTimerManager.onTrackEnded()
+                val player = controller
+                if (player != null && player.repeatMode == Player.REPEAT_MODE_OFF) {
+                    val advanced = advanceToNextCollection()
+                    if (advanced) {
+                        return
+                    }
+                }
+            }
+            if (playbackState == Player.STATE_READY) {
+                if (currentAudioSessionId > 0) {
+                    equalizerController.reapplyIfEnabled(currentAudioSessionId)
+                }
             }
             updatePlaybackState()
             saveCurrentPosition()
@@ -70,6 +87,9 @@ class PlayerConnection(
             updatePlaybackState()
             if (isPlaying) {
                 startPositionTicker()
+                if (currentAudioSessionId > 0) {
+                    equalizerController.reapplyIfEnabled(currentAudioSessionId)
+                }
             } else {
                 stopPositionTicker()
                 saveCurrentPosition()
@@ -79,6 +99,9 @@ class PlayerConnection(
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             updatePlaybackState()
             saveCurrentPosition()
+            if (currentAudioSessionId > 0) {
+                equalizerController.reapplyIfEnabled(currentAudioSessionId)
+            }
             val currentSong = _playbackState.value.currentSong
             if (currentSong != null && controller?.isPlaying == true) {
                 scope.launch(Dispatchers.IO) {
@@ -94,10 +117,12 @@ class PlayerConnection(
     }
 
     fun onAudioSessionCreated(audioSessionId: Int) {
+        currentAudioSessionId = audioSessionId
         equalizerController.attachAudioSession(audioSessionId)
     }
 
     fun onAudioSessionReleased() {
+        currentAudioSessionId = 0
         equalizerController.release()
     }
 
@@ -225,6 +250,17 @@ class PlayerConnection(
                     hasRestoredState = true
                 }
             }
+
+            // Restore saved playback context if available
+            val savedContext = preferencesRepository.getSavedPlaybackContext()
+            if (savedContext != null) {
+                try {
+                    val type = PlaybackContextType.valueOf(savedContext.first)
+                    currentPlaybackContext = PlaybackContext(type, savedContext.second)
+                } catch (e: Exception) {
+                    // Ignore malformed context
+                }
+            }
         }
     }
 
@@ -334,16 +370,144 @@ class PlayerConnection(
         val player = controller ?: return
         if (player.hasNextMediaItem()) {
             player.seekToNextMediaItem()
+        } else {
+            advanceToNextCollection()
         }
     }
 
     fun skipPrevious() {
         val player = controller ?: return
-        if (player.currentPosition > 3000 || !player.hasPreviousMediaItem()) {
+        if (player.currentPosition > 3000) {
             player.seekTo(0)
-        } else {
+        } else if (player.hasPreviousMediaItem()) {
             player.seekToPreviousMediaItem()
+        } else {
+            advanceToPreviousCollection()
         }
+    }
+
+    fun advanceToNextCollection(): Boolean {
+        val context = currentPlaybackContext ?: return false
+        val allSongs = musicRepository.allSongs.value
+        if (allSongs.isEmpty()) return false
+
+        when (context.type) {
+            PlaybackContextType.ALBUM -> {
+                val albums = musicRepository.allAlbums.value
+                if (albums.isEmpty()) return false
+                val currentIndex = albums.indexOfFirst { it.id.toString() == context.identifier }
+                val nextAlbum = if (currentIndex >= 0 && currentIndex + 1 < albums.size) {
+                    albums[currentIndex + 1]
+                } else {
+                    albums.firstOrNull()
+                } ?: return false
+
+                val nextSongs = allSongs.filter { it.albumId == nextAlbum.id }
+                if (nextSongs.isNotEmpty()) {
+                    val newContext = PlaybackContext(PlaybackContextType.ALBUM, nextAlbum.id.toString())
+                    playAll(nextSongs, startIndex = 0, context = newContext)
+                    return true
+                }
+            }
+            PlaybackContextType.ARTIST -> {
+                val artists = musicRepository.allArtists.value
+                if (artists.isEmpty()) return false
+                val currentIndex = artists.indexOfFirst { it.name.equals(context.identifier, ignoreCase = true) }
+                val nextArtist = if (currentIndex >= 0 && currentIndex + 1 < artists.size) {
+                    artists[currentIndex + 1]
+                } else {
+                    artists.firstOrNull()
+                } ?: return false
+
+                val nextSongs = allSongs.filter { it.artist.equals(nextArtist.name, ignoreCase = true) }
+                if (nextSongs.isNotEmpty()) {
+                    val newContext = PlaybackContext(PlaybackContextType.ARTIST, nextArtist.name)
+                    playAll(nextSongs, startIndex = 0, context = newContext)
+                    return true
+                }
+            }
+            PlaybackContextType.FOLDER -> {
+                val folders = musicRepository.allFolders.value
+                if (folders.isEmpty()) return false
+                val currentIndex = folders.indexOfFirst { it.path == context.identifier }
+                val nextFolder = if (currentIndex >= 0 && currentIndex + 1 < folders.size) {
+                    folders[currentIndex + 1]
+                } else {
+                    folders.firstOrNull()
+                } ?: return false
+
+                val nextSongs = allSongs.filter { File(it.data).parent == nextFolder.path }
+                if (nextSongs.isNotEmpty()) {
+                    val newContext = PlaybackContext(PlaybackContextType.FOLDER, nextFolder.path)
+                    playAll(nextSongs, startIndex = 0, context = newContext)
+                    return true
+                }
+            }
+            else -> return false
+        }
+        return false
+    }
+
+    fun advanceToPreviousCollection(): Boolean {
+        val context = currentPlaybackContext ?: return false
+        val allSongs = musicRepository.allSongs.value
+        if (allSongs.isEmpty()) return false
+
+        when (context.type) {
+            PlaybackContextType.ALBUM -> {
+                val albums = musicRepository.allAlbums.value
+                if (albums.isEmpty()) return false
+                val currentIndex = albums.indexOfFirst { it.id.toString() == context.identifier }
+                val prevAlbum = if (currentIndex > 0) {
+                    albums[currentIndex - 1]
+                } else {
+                    albums.lastOrNull()
+                } ?: return false
+
+                val prevSongs = allSongs.filter { it.albumId == prevAlbum.id }
+                if (prevSongs.isNotEmpty()) {
+                    val newContext = PlaybackContext(PlaybackContextType.ALBUM, prevAlbum.id.toString())
+                    playAll(prevSongs, startIndex = 0, context = newContext)
+                    return true
+                }
+            }
+            PlaybackContextType.ARTIST -> {
+                val artists = musicRepository.allArtists.value
+                if (artists.isEmpty()) return false
+                val currentIndex = artists.indexOfFirst { it.name.equals(context.identifier, ignoreCase = true) }
+                val prevArtist = if (currentIndex > 0) {
+                    artists[currentIndex - 1]
+                } else {
+                    artists.lastOrNull()
+                } ?: return false
+
+                val prevSongs = allSongs.filter { it.artist.equals(prevArtist.name, ignoreCase = true) }
+                if (prevSongs.isNotEmpty()) {
+                    val newContext = PlaybackContext(PlaybackContextType.ARTIST, prevArtist.name)
+                    playAll(prevSongs, startIndex = 0, context = newContext)
+                    return true
+                }
+            }
+            PlaybackContextType.FOLDER -> {
+                val folders = musicRepository.allFolders.value
+                if (folders.isEmpty()) return false
+                val currentIndex = folders.indexOfFirst { it.path == context.identifier }
+                val prevFolder = if (currentIndex > 0) {
+                    folders[currentIndex - 1]
+                } else {
+                    folders.lastOrNull()
+                } ?: return false
+
+                val prevSongs = allSongs.filter { File(it.data).parent == prevFolder.path }
+                if (prevSongs.isNotEmpty()) {
+                    val newContext = PlaybackContext(PlaybackContextType.FOLDER, prevFolder.path)
+                    playAll(prevSongs, startIndex = 0, context = newContext)
+                    return true
+                }
+            }
+            else -> return false
+        }
+        return false
     }
 
     fun setRepeatMode(repeatMode: RepeatMode) {
@@ -391,8 +555,15 @@ class PlayerConnection(
         updatePlaybackState()
     }
 
-    fun playSong(song: Song, queue: List<Song>) {
+    fun playSong(song: Song, queue: List<Song>, context: PlaybackContext? = null) {
         val player = controller ?: return
+
+        if (context != null) {
+            currentPlaybackContext = context
+            scope.launch(Dispatchers.IO) {
+                preferencesRepository.savePlaybackContext(context.type.name, context.identifier)
+            }
+        }
 
         currentSongList.clear()
         currentSongList.addAll(queue)
@@ -410,20 +581,23 @@ class PlayerConnection(
                 player.prepare()
                 player.play()
                 saveCurrentPosition()
+                if (currentAudioSessionId > 0) {
+                    equalizerController.reapplyIfEnabled(currentAudioSessionId)
+                }
             }
         }
     }
 
-    fun playAll(songs: List<Song>, startIndex: Int = 0) {
+    fun playAll(songs: List<Song>, startIndex: Int = 0, context: PlaybackContext? = null) {
         if (songs.isEmpty()) return
         val startSong = songs.getOrElse(startIndex) { songs.first() }
-        playSong(startSong, songs)
+        playSong(startSong, songs, context)
     }
 
-    fun shuffleAll(songs: List<Song>) {
+    fun shuffleAll(songs: List<Song>, context: PlaybackContext? = null) {
         if (songs.isEmpty()) return
         val shuffled = songs.shuffled()
-        playSong(shuffled.first(), shuffled)
+        playSong(shuffled.first(), shuffled, context)
         setShuffleEnabled(true)
     }
 
@@ -476,8 +650,8 @@ class PlayerConnection(
         toggleShuffle()
     }
 
-    fun playSongs(songs: List<Song>, startIndex: Int = 0) {
-        playAll(songs, startIndex)
+    fun playSongs(songs: List<Song>, startIndex: Int = 0, context: PlaybackContext? = null) {
+        playAll(songs, startIndex, context)
     }
 
     fun removeFromQueue(index: Int) {

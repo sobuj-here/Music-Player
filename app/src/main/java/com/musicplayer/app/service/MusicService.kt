@@ -61,6 +61,25 @@ class MusicService : MediaSessionService() {
             }
         })
 
+        // Also notify on media item transition or player ready to ensure effect stays attached
+        exoPlayer.addListener(object : androidx.media3.common.Player.Listener {
+            override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
+                val sid = exoPlayer.audioSessionId
+                if (sid != C.AUDIO_SESSION_ID_UNSET && sid > 0) {
+                    notifyAudioSessionCreated(sid)
+                }
+            }
+
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == androidx.media3.common.Player.STATE_READY) {
+                    val sid = exoPlayer.audioSessionId
+                    if (sid != C.AUDIO_SESSION_ID_UNSET && sid > 0) {
+                        notifyAudioSessionCreated(sid)
+                    }
+                }
+            }
+        })
+
         // Also check if audioSessionId is already valid
         val initialSessionId = exoPlayer.audioSessionId
         if (initialSessionId != C.AUDIO_SESSION_ID_UNSET && initialSessionId > 0) {
